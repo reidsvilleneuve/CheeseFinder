@@ -22,6 +22,7 @@ namespace CheeseFinder
     {
         //For quick setting of options.
         const bool _showGrid = false;
+        const bool _placeWalls = true;
         const int _gridXNodes = 10;
         const int _gridYNodes = 20;
         const int _wallChance = 15;
@@ -46,18 +47,19 @@ namespace CheeseFinder
         public CheeseFinder()
         {
             Random rng = new Random();
-            int randX = rng.Next(0, Grid.GetUpperBound(0) + 1);
-            int randY = rng.Next(0, Grid.GetUpperBound(1) + 1);
+            int randX = rng.Next(0, Grid.GetUpperBound(0) + 1); //GridUpperBound is the length of the array.
+            int randY = rng.Next(0, Grid.GetUpperBound(1) + 1); //0 for x, 1 for y.
 
             //Create a new point at each node of Grid
             for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
                 for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
                 {
                     Grid[x, y] = new Point(x, y);
-                    //Randomly place a wall at this point. This can possibly block the cheese in -
+                    //Randomly place a wall at this point if const is true. This can possibly block the cheese in -
                     //Todo: attempt to ensure that this won't happen.
-                    if (rng.Next(0, 101) < _wallChance)
-                        Grid[x, y].Contains = PointContents.Wall;
+                    if(_placeWalls)
+                        if (rng.Next(0, 101) < _wallChance)
+                            Grid[x, y].Contains = PointContents.Wall;
                 }
             //Position the Mouse at a random point on the field
             do
