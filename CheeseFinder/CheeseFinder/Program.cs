@@ -72,6 +72,11 @@ namespace CheeseFinder
             int randX = rng.Next(Grid.GetUpperBound(0) + 1); //GridUpperBound is the length of the array.
             int randY = rng.Next(Grid.GetUpperBound(1) + 1); //0 for x, 1 for y.
 
+
+            //These will be set to true if the mouse can physically get to each. That way, every random level will
+            //be possible to both win and lose.
+
+
             //Create a new point at each node of Grid
             for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
                 for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
@@ -84,7 +89,7 @@ namespace CheeseFinder
                             Grid[x, y].Contains = PointContents.Wall;
                 }
 
-            //Position the Mouse at a random point on the field
+            //Position the Mouse at a random point on the field. Note that mouse is placed first.
             PlaceMouse();
             //Position the Cheese at a random point on the field.
             PlaceCheese();
@@ -97,6 +102,75 @@ namespace CheeseFinder
 
         // ---- Methods
 
+        public bool setMouseDistance()
+        {
+            int counter = 0;
+            bool notYetFilled = true; //Set to true when all reachable grid points have been filled with MouseDistance values.
+            bool allCatsValid = false; //Set to true when all cats are in a valid spot to reach the mouse.
+
+            while(notYetFilled)
+            {
+                notYetFilled = false;
+
+                //Initialize: Set all MouseDistance values to 10000, then the mouse's to 0.
+                for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
+                    for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
+                        Grid[x, y].MouseDistance = 10000;
+
+                
+
+                for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
+                    for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
+                    {
+                        if(Grid[x, y].MouseDistance == counter)
+                        {
+
+                            //if a value here is set at all, it means that the grid has not yet been filled up.
+
+                            //Set value to the left.
+                            if (x > 0)
+                                if (!Grid[x - 1, y].CatAvoids)
+                                {
+                                    Grid[x - 1, y].MouseDistance = counter + 1;
+                                    notYetFilled = true;
+                                }
+                            //Set value to the right.
+                            if (x <= Grid.GetUpperBound(0))
+                                if (!Grid[x + 1, y].CatAvoids)
+                                {
+                                    Grid[x + 1, y].MouseDistance = counter + 1;
+                                    notYetFilled = true;
+                                }
+                            //Set value above.
+                            if (y > 0)
+                                if (!Grid[x, y - 1].CatAvoids)
+                                {
+                                    Grid[x, y - 1].MouseDistance = counter + 1;
+                                    notYetFilled = true;
+                                }
+
+                            //Set value below.
+                            if (y <= Grid.GetUpperBound(1))
+                                if (!Grid[x, y + 1].CatAvoids)
+                                {
+                                    Grid[x, y + 1].MouseDistance = counter + 1;
+                                    notYetFilled = true;
+                                }
+
+                        }
+                    }
+            }
+            //We are outside the while loop. Check to see if the cheese and cat have values assigned to them.
+            //If not the cat, mouse, and cheese cannot reach each other. Return accordingly.
+
+            //A value of 10000 means that the distance valaue has not been set, therefore is
+            //unreachable.
+            if (Grid[Cheese.X, Cheese.Y].MouseDistance != 10000)
+            {
+
+            }
+            return true;
+        }
 
         /// <summary>
         /// Places the Mouse in the Grid.
@@ -189,7 +263,7 @@ namespace CheeseFinder
                     //for (int i = 0; i < (Console.WindowHeight / 4); i++ )
                         Console.Write("\n");
 
-                    for (int i = 0; i < (Console.WindowWidth / 4) - (_gridXNodes / 2) + 1; i++)
+                    for (int i = 0; i < (Console.WindowWidth / 4) - ((Grid.GetUpperBound(0) + 1) / 2) + 1; i++)
                         Console.Write(" "); //Keep grid centered - one space for every 4 window width units.
 
                     for (int i = 0; i < Grid.GetUpperBound(0) + 1; i++)
@@ -202,7 +276,7 @@ namespace CheeseFinder
                 {
                     if (x == 0)
                     {
-                        for (int i = 0; i < Console.WindowWidth / 4 - (_gridXNodes / 2); i++)
+                        for (int i = 0; i < Console.WindowWidth / 4 - ((Grid.GetUpperBound(0) + 1) / 2); i++)
                             Console.Write(" "); //Keep grid centered - one space for every 4 window width units.
                         
                         Console.Write("|"); //Border before each row.
@@ -217,7 +291,7 @@ namespace CheeseFinder
                 Console.WriteLine(); //New line before bottom border.
             }
 
-            for (int i = 0; i < (Console.WindowWidth / 4) - (_gridXNodes / 2) + 1; i++)
+            for (int i = 0; i < (Console.WindowWidth / 4) - ((Grid.GetUpperBound(0) + 1) / 2) + 1; i++)
                 Console.Write(" "); //Keep grid centered - one space for every 4 window width units.
 
             for (int i = 0; i < Grid.GetUpperBound(0) + 1; i++)
@@ -532,6 +606,13 @@ namespace CheeseFinder
         public bool CatAvoids
         {
             get { return _catAvoids; }
+        }
+
+        private int _mouseDistance = 10000; //Initialized to a value that will never be reached in this game.
+        public int MouseDistance
+        {
+            get { return _mouseDistance; }
+            set { _mouseDistance = value; }
         }
 
 
