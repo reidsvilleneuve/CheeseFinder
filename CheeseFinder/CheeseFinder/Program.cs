@@ -11,7 +11,7 @@ namespace CheeseFinder
     {
         static void Main(string[] args)
         {
-            Console.SetBufferSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
+            Console.SetWindowSize(Console.WindowWidth, Console.LargestWindowHeight);
             CheeseFinder game = new CheeseFinder();
             game.PlayGame();
         }
@@ -28,7 +28,7 @@ namespace CheeseFinder
         const bool _placeWalls = true; //
         const int _gridXNodes = 20;    //For quick setting of options.
         const int _gridYNodes = 20;    //
-        const int _wallChance = 25;    //
+        const int _wallChance = 30;    //
         //-------------------------------
 
 
@@ -59,6 +59,13 @@ namespace CheeseFinder
             set { _cats = value; }
         }
 
+        private int _score;
+        public int Score
+        {
+            get { return _score; }
+            set { _score = value; }
+        }
+
         Random rng = new Random(); //Defined here so that rng.Next() will not repeat numbers as easily.
 
         // ---- Constructors
@@ -69,11 +76,23 @@ namespace CheeseFinder
         /// </summary>
         public CheeseFinder()
         {
+            this.Initialize();
+        }
+
+
+        // ---- Methods
+
+
+        public void Initialize()
+        {
             int randX = rng.Next(Grid.GetUpperBound(0) + 1); //GridUpperBound is the length of the array.
             int randY = rng.Next(Grid.GetUpperBound(1) + 1); //0 for x, 1 for y.
 
+            while (Cats.Count > 0)
+                Cats.RemoveAt(0);
 
-            
+            this.Score = 0;
+
             //Loop as long as mouse can reach BOTH cat AND cheese.
             do //We re-create the entire grid in case the mouse is trapped in a VERY tiny space.
             {
@@ -91,26 +110,23 @@ namespace CheeseFinder
 
                 //Position the Mouse at a random point on the field. Note that mouse is placed first.
                 PlaceMouse();
-                setMouseDistance(false); //PlaceCheese and PlaceCats rely on MouseDistance values.
+                SetMouseDistance(false); //PlaceCheese and PlaceCats rely on MouseDistance values.
                 //Position the Cheese at a random point on the field.
                 PlaceCheese();
                 //Positon the Cat at a random point on the field.
                 if(Cats.Count == 1) //This happens if we had to loop at least once.
                     Cats.RemoveAt(0); //Remove old cat before placing new one.
                 PlaceCat();
-            } while (!setMouseDistance(true)); // Returns false if mouse can't reach cats and cheese.
+
+            } while (!SetMouseDistance(true)); // Returns false if mouse can't reach cats and cheese.
 
         }
 
 
-        // ---- Methods
-
-
-        public bool setMouseDistance(bool startup)
+        public bool SetMouseDistance(bool startup)
         {
             int counter = 0;
             bool notYetFilled = true; //Set to true when all reachable grid points have been filled with MouseDistance values.
-
 
             //Initialize: Set all MouseDistance values to 10000, then the mouse's to 0.
             for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
@@ -218,8 +234,6 @@ namespace CheeseFinder
             //A value of 10000 means that the distance valaue has not been set, therefore is
             //unreachable.
 
-            //If function is called with startup set to false, this will always return false. That is okay,
-            //because ignoreCatAvoids is only used during movement calculation. The return is non-important at that time.
             //Startup checked here because the grid is not filled with the Cheese Point instantiated when first called.
             if (startup
                 && Grid[Cheese.X, Cheese.Y].MouseDistance != 10000
@@ -469,19 +483,21 @@ namespace CheeseFinder
 
         }
 
-        public void MoveCats()
+        public bool MoveCats()
         {
-            Point pointToMove = new Point(0, 0); //Will hold the x, y value of where the cat should move.
-            this.setMouseDistance(false); //Sets the move priority of each Point. The lower the number, the close the mouse.
-
             foreach(Point cat in Cats)
             {
+                Point pointToMove = new Point(0, 0); //Will hold the x, y value of where the cat should move.
+                bool doMove = false; //If a cat cannot move because of being surrounded, this will stop it from
+                //occupying the space that something else is already in.
+
+                //We must call setMouseDistance before moving every cat so that previous cat's movements are
+                //compensated for. Reset doMove.
+                this.SetMouseDistance(false); //Sets the move priority of each Point. The lower the number, the closer the mouse.
+                doMove = false;
+
                 if (rng.Next(2) == 0) //Cats have a 50% chance to move.
                 {
-                    //We must call setMouseDistance before moving every cat so that previous cat's movements are
-                    //compensated for.
-                    setMouseDistance(false);
-                   
                     //The non-nested if statements here prevent the cat from even checking squares outside the
                     //bonds of the grid.
 
@@ -492,6 +508,7 @@ namespace CheeseFinder
                     if (cat.X > 0)
                         if (Grid[cat.X - 1, cat.Y].MouseDistance < pointToMove.MouseDistance)
                         {
+                            doMove = true;
                             pointToMove.X = cat.X - 1;
                             pointToMove.Y = cat.Y;
                             pointToMove.MouseDistance = Grid[cat.X - 1, cat.Y].MouseDistance;
@@ -500,6 +517,7 @@ namespace CheeseFinder
                     if (cat.X < Grid.GetUpperBound(0))
                         if (Grid[cat.X + 1, cat.Y].MouseDistance < pointToMove.MouseDistance)
                         {
+                            doMove = true;
                             pointToMove.X = cat.X + 1;
                             pointToMove.Y = cat.Y;
                             pointToMove.MouseDistance = Grid[cat.X + 1, cat.Y].MouseDistance;
@@ -508,6 +526,7 @@ namespace CheeseFinder
                     if (cat.Y > 0)
                         if (Grid[cat.X, cat.Y - 1].MouseDistance < pointToMove.MouseDistance)
                         {
+                            doMove = true;
                             pointToMove.X = cat.X;
                             pointToMove.Y = cat.Y - 1;
                             pointToMove.MouseDistance = Grid[cat.X, cat.Y - 1].MouseDistance;
@@ -516,31 +535,65 @@ namespace CheeseFinder
                     if (cat.Y < Grid.GetUpperBound(1))
                         if (Grid[cat.X, cat.Y + 1].MouseDistance < pointToMove.MouseDistance)
                         {
+                            doMove = true;
                             pointToMove.X = cat.X;
                             pointToMove.Y = cat.Y + 1;
                             pointToMove.MouseDistance = Grid[cat.X, cat.Y + 1].MouseDistance;
                         }
 
-                    //Best move position found. Set the cat to this position.
-                    //First, update the game field to reflect the change.
-                    Grid[cat.X, cat.Y].Contains = PointContents.Space;
-                    Grid[pointToMove.X, pointToMove.Y].Contains = PointContents.Cat;
+                    if (doMove) //Best move position found. Set the cat to this position.
+                    {
+                        //First, update the game field to reflect the change.
+                        Grid[cat.X, cat.Y].Contains = PointContents.Space;
+                        Grid[pointToMove.X, pointToMove.Y].Contains = PointContents.Cat;
 
-                    //Now update the cat in the List that we are reading from.
-                    cat.X = pointToMove.X;
-                    cat.Y = pointToMove.Y; 
+                        //Now update the cat in the List that we are reading from.
+                        cat.X = pointToMove.X;
+                        cat.Y = pointToMove.Y;
+                    }
                 }
             }
+
+            //If any cat's position matches the mouse's, return true.
+            if (Cats.Any(x => (x.X == Mouse.X && x.Y == Mouse.Y)))
+                return true;
+
+            return false;
         }
 
 
+        private bool runAgain()
+        {
+            ConsoleKey input;
+            string pieceGrammer = "pieces";
+
+            if (this.Score == 1)
+                pieceGrammer = "piece";
+
+            do
+            {
+                Console.Clear();
+                Console.Write("\n\nYou got caught!\nYou ate {0} {1} of cheese.\n\nPlay again? (Y, N) ", this.Score, pieceGrammer);
+                input = Console.ReadKey().Key;
+
+                if (input == ConsoleKey.Y)
+                {
+                    Initialize();
+                    return true;
+                }
+
+                if (input == ConsoleKey.N)
+                    return false;
+            } while (true);
+        }
 
         /// <summary>
         /// Play a game of CheeeseFinder.
         /// </summary>
         public void PlayGame()
         {
-            int cheeseLeft = 6; //Will beset to True when cheese is found.
+            bool gameRunning = true; //Will beset to True when cheese is found.
+            
             
             //The following is a timer for multithreading. This feature is not active for this release.
 
@@ -550,28 +603,27 @@ namespace CheeseFinder
             //gameTimer.Enabled = true;
             //gameTimer.AutoReset = false;
 
+
             //Main game loop.
             do
             {
                 Console.Clear();
                 //Draws the game field.
                 this.DrawGrid(_showGrid);
-                Console.WriteLine("\n\nCheese pieces left to grab: {0}!", cheeseLeft);
                 
-                if (MoveMouse()) //Returns true if mouse touches cheese.
+                if (MoveMouse()) //Returns true if mouse lands on cheese.
                 {
-                    cheeseLeft--;
+                    this.Score++;
+                    this.Grid[Mouse.X, Mouse.Y].Contains = PointContents.Mouse; //S
                     PlaceCheese();
                     PlaceCat();
                 }
 
-                MoveCats();
-            } while (cheeseLeft > 0);
+                if (MoveCats()) //Returns true if cat lands on mouse.
+                    if (!runAgain())//Asks the user if they want to play again.
+                        gameRunning = false;
 
-            //Will only exit on victory in this version.
-            Console.Clear();
-            Console.WriteLine("You win!");
-            Console.ReadKey();
+            } while (gameRunning);
         }
 
         /*
