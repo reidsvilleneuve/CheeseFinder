@@ -28,7 +28,7 @@ namespace CheeseFinder
         const bool _placeWalls = true; //
         const int _gridXNodes = 10;    //For quick setting of options.
         const int _gridYNodes = 20;    //
-        const int _wallChance = 5;    //
+        const int _wallChance = 30;    //
         //-------------------------------
 
 
@@ -73,29 +73,31 @@ namespace CheeseFinder
             int randY = rng.Next(Grid.GetUpperBound(1) + 1); //0 for x, 1 for y.
 
 
-            //These will be set to true if the mouse can physically get to each. That way, every random level will
-            //be possible to both win and lose.
+            
+            //Loop as long as mouse can reach BOTH cat AND cheese.
+            do //We re-create the entire grid in case the mouse is trapped in a VERY tiny space.
+            {
+                //Create a new point at each node of Grid
+                for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
+                    for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
+                    {
+                        Grid[x, y] = new Point(x, y);
+                        //Randomly place a wall at this point if const is true. This can possibly block the cheese in -
+                        //Todo: attempt to ensure that this won't happen.
+                        if (_placeWalls)
+                            if (rng.Next(101) < _wallChance)
+                                Grid[x, y].Contains = PointContents.Wall;
+                    }
 
-
-            //Create a new point at each node of Grid
-            for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
-                for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
-                {
-                    Grid[x, y] = new Point(x, y);
-                    //Randomly place a wall at this point if const is true. This can possibly block the cheese in -
-                    //Todo: attempt to ensure that this won't happen.
-                    if(_placeWalls)
-                        if (rng.Next(101) < _wallChance)
-                            Grid[x, y].Contains = PointContents.Wall;
-                }
-
-            //Position the Mouse at a random point on the field. Note that mouse is placed first.
-            PlaceMouse();
-            //Position the Cheese at a random point on the field.
-            PlaceCheese();
-            //Positon the Cat at a random point on the field.
-            PlaceCat();
-
+                //Position the Mouse at a random point on the field. Note that mouse is placed first.
+                PlaceMouse();
+                //Position the Cheese at a random point on the field.
+                PlaceCheese();
+                //Positon the Cat at a random point on the field.
+                if(Cats.Count == 1) //This happens if we had to loop at least once.
+                    Cats.RemoveAt(0);
+                PlaceCat();
+            } while (!setMouseDistance()); // Returns false if mouse can't reach cats and cheese.
 
         }
 
@@ -106,52 +108,53 @@ namespace CheeseFinder
         {
             int counter = 0;
             bool notYetFilled = true; //Set to true when all reachable grid points have been filled with MouseDistance values.
-            bool allCatsValid = false; //Set to true when all cats are in a valid spot to reach the mouse.
 
-            while(notYetFilled)
+
+            //Initialize: Set all MouseDistance values to 10000, then the mouse's to 0.
+            for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
+                for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
+                    Grid[x, y].MouseDistance = 10000;
+
+            Grid[Mouse.X, Mouse.Y].MouseDistance = 0;
+
+            while(notYetFilled) // Loop until all possible points have been filled.
             {
-                notYetFilled = false;
-
-                //Initialize: Set all MouseDistance values to 10000, then the mouse's to 0.
-                for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
-                    for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
-                        Grid[x, y].MouseDistance = 10000;
-
-                
+                notYetFilled = false; //Set to true if a point has been filled.
 
                 for (int y = 0; y < Grid.GetUpperBound(1) + 1; y++)
+                {
                     for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
                     {
-                        if(Grid[x, y].MouseDistance == counter)
+                        if (Grid[x, y].MouseDistance == counter)
                         {
 
                             //if a value here is set at all, it means that the grid has not yet been filled up.
 
                             //Set value to the left.
                             if (x > 0)
-                                if (!Grid[x - 1, y].CatAvoids)
+                                if (!(Grid[x - 1, y].Contains == PointContents.Wall) && Grid[x - 1, y].MouseDistance == 10000)
                                 {
                                     Grid[x - 1, y].MouseDistance = counter + 1;
                                     notYetFilled = true;
                                 }
                             //Set value to the right.
-                            if (x <= Grid.GetUpperBound(0))
-                                if (!Grid[x + 1, y].CatAvoids)
+                            if (x < Grid.GetUpperBound(0))
+                                if (!(Grid[x + 1, y].Contains == PointContents.Wall) && Grid[x + 1, y].MouseDistance == 10000)
                                 {
                                     Grid[x + 1, y].MouseDistance = counter + 1;
                                     notYetFilled = true;
                                 }
                             //Set value above.
                             if (y > 0)
-                                if (!Grid[x, y - 1].CatAvoids)
+                                if (!(Grid[x, y - 1].Contains == PointContents.Wall) && Grid[x, y - 1].MouseDistance == 10000)
                                 {
                                     Grid[x, y - 1].MouseDistance = counter + 1;
                                     notYetFilled = true;
                                 }
 
                             //Set value below.
-                            if (y <= Grid.GetUpperBound(1))
-                                if (!Grid[x, y + 1].CatAvoids)
+                            if (y < Grid.GetUpperBound(1))
+                                if (!(Grid[x, y + 1].Contains == PointContents.Wall) && Grid[x, y + 1].MouseDistance == 10000)
                                 {
                                     Grid[x, y + 1].MouseDistance = counter + 1;
                                     notYetFilled = true;
@@ -159,17 +162,20 @@ namespace CheeseFinder
 
                         }
                     }
+                }
+                counter++; //Will make loop look for values 1 higher than before.
             }
+
             //We are outside the while loop. Check to see if the cheese and cat have values assigned to them.
             //If not the cat, mouse, and cheese cannot reach each other. Return accordingly.
 
             //A value of 10000 means that the distance valaue has not been set, therefore is
             //unreachable.
-            if (Grid[Cheese.X, Cheese.Y].MouseDistance != 10000)
-            {
+            if (Grid[Cheese.X, Cheese.Y].MouseDistance != 10000
+                && !(Cats.Any(x => Grid[x.X, x.Y].MouseDistance == 10000))) //Cheese and all cats are reachable
+                    return true;
 
-            }
-            return true;
+            return false;
         }
 
         /// <summary>
@@ -410,68 +416,61 @@ namespace CheeseFinder
 
         public void MoveCats()
         {
-            int xDistance;
-            int yDistance;
+            Point pointToMove = new Point(0, 0); //Will hold the x, y value of where the cat should move.
+            this.setMouseDistance(); //Sets the move priority of each Point. The lower the number, the close the mouse.
+
             foreach(Point cat in Cats)
             {
-                xDistance = cat.X - Mouse.X; //Negative if mouse is to the right, positive if to the left.
-                yDistance = cat.Y - Mouse.Y; //Negative is mouse is below, postive if above.
+                //The non-nested if statements here prevent the cat from even checking squares outside the
+                //bonds of the grid.
 
-                if (Math.Abs(xDistance) > Math.Abs(yDistance)) //X is greater than y. Move on X plane.
-                {
-                    if (xDistance < 0) //The mouse is to the right.
-                    {
-                        if (!(Grid[cat.X + 1, cat.Y]).CatAvoids)
-                        {
-                            Grid[cat.X + 1, cat.Y].Contains = PointContents.Cat;
-                            Grid[cat.X, cat.Y].Contains = PointContents.Space;
-                            cat.X += 1;
-                        }
-                    }
-                    else //The mouse is to the left.
-                    {
-                        if (!(Grid[cat.X - 1, cat.Y]).CatAvoids)
-                        {
-                            Grid[cat.X - 1, cat.Y].Contains = PointContents.Cat;
-                            Grid[cat.X, cat.Y].Contains = PointContents.Space;
-                            cat.X -= 1;
-                        }
-                    }
-                }
-                else
-                {
-                    //Y is greater than or equal to X. Move on Y plane.
+                //If a position has a lower MouseDistance, set the pointToMove's X and Y to that position and
+                //update pointToMove's MouseDistance.
 
-                    //Because of the wide shape of the sprites in this game, there is likely to be more
-                    //Y nodes than X nodes, so we prioritize Y movement.
-
-                    if (yDistance < 0) //The mouse is below.
+                //Checks MouseDistance value to the left.
+                if (cat.X > 0)
+                    if(Grid[cat.X - 1, cat.Y].MouseDistance < pointToMove.MouseDistance)
                     {
-                        if (!(Grid[cat.X, cat.Y + 1]).CatAvoids)
-                        {
-                            Grid[cat.X, cat.Y + 1].Contains = PointContents.Cat;
-                            Grid[cat.X, cat.Y].Contains = PointContents.Space;
-                            cat.Y += 1;
-                        }
+                        pointToMove.X = cat.X - 1;
+                        pointToMove.Y = cat.Y;
+                        pointToMove.MouseDistance = Grid[cat.X - 1, cat.Y].MouseDistance;
                     }
-                    else //The mouse is to the above.
+                //Checks MouseDistance value to the right.
+                if (cat.X < Grid.GetUpperBound(0))
+                    if(Grid[cat.X + 1, cat.Y].MouseDistance < pointToMove.MouseDistance)
                     {
-                        if (!(Grid[cat.X, cat.Y - 1]).CatAvoids)
-                        {
-                            Grid[cat.X, cat.Y - 1].Contains = PointContents.Cat;
-                            Grid[cat.X, cat.Y].Contains = PointContents.Space;
-                            cat.Y -= 1;
-                        }
+                        pointToMove.X = cat.X + 1;
+                        pointToMove.Y = cat.Y;
+                        pointToMove.MouseDistance = Grid[cat.X + 1, cat.Y].MouseDistance;
+                    }
+                //Checks MouseDistance value above.
+                if (cat.Y > 0)
+                    if(Grid[cat.X, cat.Y - 1].MouseDistance < pointToMove.MouseDistance)
+                    {
+                        pointToMove.X = cat.X;
+                        pointToMove.Y = cat.Y - 1;
+                        pointToMove.MouseDistance = Grid[cat.X, cat.Y - 1].MouseDistance;
+                    }
+                //Checks MouseDistance value below.
+                if (cat.Y < Grid.GetUpperBound(1))
+                    if(Grid[cat.X, cat.Y + 1].MouseDistance < pointToMove.MouseDistance)
+                    {
+                        pointToMove.X = cat.X;
+                        pointToMove.Y = cat.Y + 1;
+                        pointToMove.MouseDistance = Grid[cat.X, cat.Y + 1].MouseDistance;
                     }
 
-                }
+                //Best move position found. Set the cat to this position.
+                //First, update the game field to reflect the change.
+                Grid[cat.X, cat.Y].Contains = PointContents.Space;
+                Grid[pointToMove.X, pointToMove.Y].Contains = PointContents.Cat;
+
+                //Now update the cat in the List that we are reading from.
+                cat.X = pointToMove.X;
+                cat.Y = pointToMove.Y;
             }
         }
 
-        //public bool CatMoveValid()
-        //{
-
-        //}
 
 
         /// <summary>
