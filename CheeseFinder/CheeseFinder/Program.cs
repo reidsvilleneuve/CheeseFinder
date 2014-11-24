@@ -28,7 +28,8 @@ namespace CheeseFinder
         const bool _placeWalls = true; //
         const int _gridXNodes = 20;    //For quick setting of options.
         const int _gridYNodes = 20;    //
-        const int _wallChance = 30;    //
+        const int _wallChance = 25;    //
+        const int _catMoveChance = 50;
         //-------------------------------
 
 
@@ -61,6 +62,13 @@ namespace CheeseFinder
 
         private int _score;
         public int Score
+        {
+            get { return _score; }
+            set { _score = value; }
+        }
+
+        private int _highScore = 0;
+        public int HighScore
         {
             get { return _score; }
             set { _score = value; }
@@ -344,7 +352,6 @@ namespace CheeseFinder
                     for (int i = 0; i < Grid.GetUpperBound(0) + 1; i++)
                         Console.Write("---"); //Top border. Three dashes per node in the list.
 
-                    Console.Write("           "); //The upper right corner.
                     Console.WriteLine(); //New line before grid is drawn.
                 }
                 for (int x = 0; x < Grid.GetUpperBound(0) + 1; x++)
@@ -496,7 +503,7 @@ namespace CheeseFinder
                 this.SetMouseDistance(false); //Sets the move priority of each Point. The lower the number, the closer the mouse.
                 doMove = false;
 
-                if (rng.Next(2) == 0) //Cats have a 50% chance to move.
+                if (rng.Next(100) <= _catMoveChance) //Cats have a 50% chance to move.
                 {
                     //The non-nested if statements here prevent the cat from even checking squares outside the
                     //bonds of the grid.
@@ -506,7 +513,8 @@ namespace CheeseFinder
 
                     //Checks MouseDistance value to the left.
                     if (cat.X > 0)
-                        if (Grid[cat.X - 1, cat.Y].MouseDistance < pointToMove.MouseDistance)
+                        if (Grid[cat.X - 1, cat.Y].MouseDistance < pointToMove.MouseDistance
+                            && !Grid[cat.X - 1, cat.Y].CatAvoids)
                         {
                             doMove = true;
                             pointToMove.X = cat.X - 1;
@@ -515,7 +523,8 @@ namespace CheeseFinder
                         }
                     //Checks MouseDistance value to the right.
                     if (cat.X < Grid.GetUpperBound(0))
-                        if (Grid[cat.X + 1, cat.Y].MouseDistance < pointToMove.MouseDistance)
+                        if (Grid[cat.X + 1, cat.Y].MouseDistance < pointToMove.MouseDistance
+                            && !Grid[cat.X + 1, cat.Y].CatAvoids)
                         {
                             doMove = true;
                             pointToMove.X = cat.X + 1;
@@ -524,7 +533,8 @@ namespace CheeseFinder
                         }
                     //Checks MouseDistance value above.
                     if (cat.Y > 0)
-                        if (Grid[cat.X, cat.Y - 1].MouseDistance < pointToMove.MouseDistance)
+                        if (Grid[cat.X, cat.Y - 1].MouseDistance < pointToMove.MouseDistance
+                            && !Grid[cat.X, cat.Y - 1].CatAvoids)
                         {
                             doMove = true;
                             pointToMove.X = cat.X;
@@ -533,7 +543,8 @@ namespace CheeseFinder
                         }
                     //Checks MouseDistance value below.
                     if (cat.Y < Grid.GetUpperBound(1))
-                        if (Grid[cat.X, cat.Y + 1].MouseDistance < pointToMove.MouseDistance)
+                        if (Grid[cat.X, cat.Y + 1].MouseDistance < pointToMove.MouseDistance
+                            && !Grid[cat.X, cat.Y + 1].CatAvoids)
                         {
                             doMove = true;
                             pointToMove.X = cat.X;
@@ -562,14 +573,21 @@ namespace CheeseFinder
         }
 
 
+        /// <summary>
+        /// Asks user if they want to run the game again.
+        /// </summary>
+        /// <returns>True if the user wants to play again.</returns>
         private bool runAgain()
         {
             ConsoleKey input;
+            
+            //Numerical grammer
             string pieceGrammer = "pieces";
 
             if (this.Score == 1)
                 pieceGrammer = "piece";
 
+            //Keep asking until user inputs correctly.
             do
             {
                 Console.Clear();
@@ -578,12 +596,14 @@ namespace CheeseFinder
 
                 if (input == ConsoleKey.Y)
                 {
-                    Initialize();
+                    Initialize(); //Reset the game to how it was when it started.
                     return true;
                 }
 
                 if (input == ConsoleKey.N)
                     return false;
+            
+            //No reason to set a different loop condition.  When user inputs correctly, function will return and exit.
             } while (true);
         }
 
@@ -614,7 +634,7 @@ namespace CheeseFinder
                 if (MoveMouse()) //Returns true if mouse lands on cheese.
                 {
                     this.Score++;
-                    this.Grid[Mouse.X, Mouse.Y].Contains = PointContents.Mouse; //S
+                    this.Grid[Mouse.X, Mouse.Y].Contains = PointContents.Mouse;
                     PlaceCheese();
                     PlaceCat();
                 }
