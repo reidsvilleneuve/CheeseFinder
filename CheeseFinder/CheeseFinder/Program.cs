@@ -29,7 +29,7 @@ namespace CheeseFinder
         const int _gridXNodes = 20;    //For quick setting of options.
         const int _gridYNodes = 20;    //
         const int _wallChance = 25;    //
-        const int _catMoveChance = 50;
+        const int _catMoveChance = 50; //
         //-------------------------------
 
 
@@ -418,8 +418,20 @@ namespace CheeseFinder
             {
                 case ConsoleKey.UpArrow:
                     if (this.Mouse.Y > 0)
-                        if(Grid[Mouse.X, Mouse.Y - 1].CanMoveTo)
+                    {
+                        if (Grid[Mouse.X, Mouse.Y - 1].CanMoveTo)
                             return true;
+                        else
+                        {
+                            if (Grid[Mouse.X, Mouse.Y - 1].Contains == PointContents.Wall)
+                            {
+                                if (Grid[Mouse.X, Mouse.Y - 1].WallHealth == 1)
+                                    Grid[Mouse.X, Mouse.Y - 1].Contains = PointContents.Space;
+                                else
+                                    Grid[Mouse.X, Mouse.Y - 1].WallHealth--;
+                            }
+                        }
+                    }
 
                     break;
 
@@ -427,6 +439,16 @@ namespace CheeseFinder
                     if (this.Mouse.Y < Grid.GetUpperBound(1))
                         if (Grid[Mouse.X, Mouse.Y + 1].CanMoveTo)
                             return true;
+                        else
+                        {
+                            if (Grid[Mouse.X, Mouse.Y + 1].Contains == PointContents.Wall)
+                            {
+                                if (Grid[Mouse.X, Mouse.Y + 1].WallHealth == 1)
+                                    Grid[Mouse.X, Mouse.Y + 1].Contains = PointContents.Space;
+                                else
+                                    Grid[Mouse.X, Mouse.Y + 1].WallHealth--;
+                            }
+                        }
 
                     break;
 
@@ -434,6 +456,16 @@ namespace CheeseFinder
                     if (this.Mouse.X > 0)
                         if (Grid[Mouse.X - 1, Mouse.Y].CanMoveTo)
                             return true;
+                        else
+                        {
+                            if (Grid[Mouse.X - 1, Mouse.Y].Contains == PointContents.Wall)
+                            {
+                                if (Grid[Mouse.X - 1, Mouse.Y].WallHealth == 1)
+                                    Grid[Mouse.X - 1, Mouse.Y].Contains = PointContents.Space;
+                                else
+                                    Grid[Mouse.X - 1, Mouse.Y].WallHealth--;
+                            }
+                        }
 
                     break;
 
@@ -441,6 +473,16 @@ namespace CheeseFinder
                     if (this.Mouse.X < Grid.GetUpperBound(0))
                         if (Grid[Mouse.X + 1, Mouse.Y].CanMoveTo)
                            return true;
+                        else
+                        {
+                            if (Grid[Mouse.X + 1, Mouse.Y].Contains == PointContents.Wall)
+                            {
+                                if (Grid[Mouse.X + 1, Mouse.Y].WallHealth == 1)
+                                    Grid[Mouse.X + 1, Mouse.Y].Contains = PointContents.Space;
+                                else
+                                    Grid[Mouse.X + 1, Mouse.Y].WallHealth--;
+                            }
+                        }
 
                     break;
             }
@@ -627,7 +669,7 @@ namespace CheeseFinder
             //Main game loop.
             do
             {
-                Console.Clear();
+                Console.SetCursorPosition(0,0);
                 //Draws the game field.
                 this.DrawGrid(_showGrid);
                 
@@ -654,7 +696,7 @@ namespace CheeseFinder
         /// <param name="e"></param>
         public void OnGameTimer(Object source, ElapsedEventArgs e)
         {
-            Console.Clear();
+            Console.SetCursorPosition(0,0);
             DrawGrid(_showGrid);
             System.Timers.Timer theTimer = (System.Timers.Timer)source;
             theTimer.Enabled = true;
@@ -755,6 +797,13 @@ namespace CheeseFinder
             set { _mouseDistance = value; }
         }
 
+        private int _wallHealth = 3; //Every wall starts with full health.
+        public int WallHealth
+        {
+            get { return _wallHealth; }
+            set { _wallHealth = value; }
+        }
+
 
         // ---- Constructors
         
@@ -804,6 +853,24 @@ namespace CheeseFinder
 
             else if (this.Contains == PointContents.Cat)
                 Console.ForegroundColor = ConsoleColor.Red;
+
+            else if (this.Contains == PointContents.Wall)
+            {
+                switch (WallHealth)
+                {
+                    case 3:
+                        Console.ForegroundColor = ConsoleColor.White;
+                        break;
+
+                    case 2:
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        break;
+
+                    case 1:
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        break;
+                }
+            }
 
             //If we are to draw the entire grid, return all points with brackets.
             if(drawGrid)
