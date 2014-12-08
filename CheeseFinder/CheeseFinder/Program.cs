@@ -399,10 +399,7 @@ namespace CheeseFinder
                 else
                     return ConsoleKey.L;
             else
-            {
-                Console.WriteLine("Move your mouse with the arrow keys!");
                 return ConsoleKey.L;
-            }
 
         }
 
@@ -488,7 +485,6 @@ namespace CheeseFinder
             }
 
             //Will only get here if no arrow was pressed.
-            Console.WriteLine("Not a valid move");
             return false;
         }
 
